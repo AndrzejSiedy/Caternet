@@ -1,0 +1,132 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using Caternet.Models
+@using Caternet.Models.ViewModels
+
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+@model HomeViewModel
+
+<div class="panel">
+    <div class="panel-body">
+        @if (SignInManager.IsSignedIn(User))
+        {
+            <div class="row">
+                <div class="col-md-6">
+
+                    <div>
+                        <h3>Hey @UserManager.GetUserName(User)!</h3>
+                    </div>
+                    <div>
+                        <h3>Please select Event you would like to attend</h3>
+                    </div>
+
+                </div>
+                <div class="col-md-6">
+
+                    <div class="form-group">
+                        @Html.LabelFor(m => m.Events, new { @class = "control-label col-md-2" })
+                        <div class="col-md-10">
+                            @Html.DropDownListFor(m => m.Events,
+                              new SelectList(Model.Events, "Id", "Name"),
+                              "Select Event",
+                              new { @id = "Events", @class = "form-control", @onchange = "FillSeats()" })
+                            @Html.ValidationMessageFor(m => m.Events, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        @Html.LabelFor(m => m.Seats, new { @class = "control-label col-md-2" })
+                        <div class="col-md-10">
+                            @Html.DropDownListFor(m => m.Seats,
+                           new SelectList(Enumerable.Empty<SelectListItem>(), "Id", "SeatNumber"),
+                                  "Select Seat",
+                                  new { @id = "Seats", @class = "form-control" })
+                            @Html.ValidationMessageFor(m => m.Seats, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-primary" onclick="SaveSeat()">Save Seat</button>
+                    </div>
+
+                    <div>
+                        Seats selected by user: <span id="seats-selected"></span>
+                    </div>
+                    <div id="message">
+                    </div>
+
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="row">
+                <h3>
+                    <span>You must be logged in to singup for Event</span>
+                </h3>
+            </div>
+
+        }
+
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <h2>Application uses</h2>
+        <ul>
+            <li>Sample pages using ASP.NET Core MVC</li>
+            <li><a href="https://go.microsoft.com/fwlink/?LinkId=518004">Bower</a> for managing client-side libraries</li>
+            <li>Theming using <a href="https://go.microsoft.com/fwlink/?LinkID=398939">Bootstrap</a></li>
+        </ul>
+    </div>
+    <div class="col-md-6">
+        <h2>Overview</h2>
+
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function FillSeats() {
+            var eventId = $('#Events').val();
+            $.ajax({
+                url: '/Events/GetSeats',
+                type: "GET",
+                dataType: "json",
+                data: { eventId: eventId },
+                success: function (seats) {
+                    console.warn(seats);
+                    $("#Seats").html(""); // clear before appending new list
+                    $.each(seats, function (i, seat) {
+                        $("#Seats").append(
+                            $('<option></option>').val(seat.id).html(seat.seatNumber));
+                    });
+                }
+            });
+        }
+
+
+        function SaveSeat() {
+            var eventId = $('#Events').val();
+            var seatId = $('#Seats').val();
+            $.ajax({
+                url: '/Events/SaveSeat',
+                type: "POST",
+                dataType: "json",
+                data: { eventId: eventId, seatId: seatId },
+                success: function (data) {
+                    console.warn(data);
+                    $("#message").html(data.message);
+                    $("#seats-selected").html(data.bookedSeats);
+                }
+            });
+        }
+
+    </script>
+}
