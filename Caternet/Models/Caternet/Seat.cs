@@ -11,6 +11,8 @@ namespace Caternet.Models.Caternet
         public int Row { get; set; }
         public int Col { get; set; }
         public string SeatNumber { get; set; }
+        public string Email { get; set; }
+        public string AttendeeName { get; set; }
         public virtual Event Event {get;set;}
         public virtual ApplicationUser User { get; set; }
     }
