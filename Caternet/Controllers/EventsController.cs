@@ -189,57 +189,79 @@ namespace Caternet.Controllers
         [HttpGet]
         public async Task<JsonResult> GetSeats(int eventId)
         {
-            var seats = await _context.Seats.Where(s => s.Event.Id == eventId).OrderBy( o => o.SeatNumber).ToListAsync();
-            return Json(seats);
+
+            var eventSeats = await _context.Seats.Where(s => s.Event.Id == eventId).OrderBy(o => o.SeatNumber).ToListAsync();
+
+            var availableSeats = eventSeats.Where(s => string.IsNullOrEmpty(s.Email)).OrderBy(o => o.SeatNumber).ToList();
+
+            // logged in user
+            var user = await _userManager.GetUserAsync(User);
+            var userSeats = eventSeats.Where(s => s.User != null && s.User.Id == user.Id).Select(s => s.SeatNumber);
+            var output = new
+            {
+                Seats = availableSeats,
+                UserSeats = string.Join(",", userSeats)
+            };
+            return Json(output);
         }
 
         [HttpPost]
-        public async Task<JsonResult> SaveSeat (int eventId, int seatId)
+        public async Task<JsonResult> SaveSeat (int eventId, int seatId, string email, string attendeeName)
         {
+
+            // get seat
+            var eventSeats = await _context.Seats.Where(s => s.Event.Id == eventId).OrderBy(o => o.SeatNumber).ToListAsync();
+
             // get logged in user
             var user = await _userManager.GetUserAsync(User);
+            var seat = eventSeats.FirstOrDefault(s => s.Id == seatId);
 
             // get user seats for event that are not yet assigned
-            var userSeats = _context.Seats.Where(s => s.User.Id == user.Id && s.Event.Id == eventId).ToList();
+            var userSeats = eventSeats.Where(s => s.User != null && s.User.Id == user.Id).ToList();
+            var uSeats = userSeats.Select(s => s.SeatNumber);
 
-            // if user assigned seats exceds hardcoded value
+            var availableSeats = eventSeats.Where(s => string.IsNullOrEmpty(s.Email)).OrderBy(o => o.SeatNumber).ToList();
+            if (seat != null && !string.IsNullOrEmpty(seat.Email))
+            {
+                // this seat is booked
+                return Json(new
+                {
+                    Seats = availableSeats,
+                    success = false,
+                    UserSeats = string.Join(",", uSeats) + $" Seat {seat.SeatNumber} is aleady taken, refresh page to get updated list of free seats"
+                });
+            }
+
+            // if user assigned seats exceeds hardcoded value
             // prevent from booking more seats
-            if(userSeats.Count > seatsPerUser)
+            if(userSeats.Count >= seatsPerUser)
             {
                 return Json(new
                 {
+                    Seats = availableSeats,
                     success = false,
                     message = $"Only {seatsPerUser} can be booked by single user",
-                    bookedSeats = string.Join(",", userSeats.Select( s => s.SeatNumber).ToArray())
+                    UserSeats = string.Join(",", uSeats) + $" only {seatsPerUser} seats can be booked by user"
                 });
             }
-
-            // get seat
-            var seat = _context.Seats.FirstOrDefault(s => s.Id == seatId && s.Event.Id == eventId);
-            if(seat.User != null){
-                // seat already assigned to the user
-                return Json(new
-                {
-                    success = false,
-                    message = $"{seat.SeatNumber} already booked",
-                    bookedSeats = string.Join(",", userSeats.Select(s => s.SeatNumber).ToArray())
-                });
-
-            }
-
 
             // assign user
             seat.User = user;
+            seat.Email = email;
+            seat.AttendeeName = attendeeName;
             // save
             await _context.SaveChangesAsync();
+
+            availableSeats = _context.Seats.Where(s => s.Event.Id == eventId && string.IsNullOrEmpty(s.Email)).OrderBy(o => o.SeatNumber).ToList();
 
             // get booked seats
             var seatsSelected = _context.Seats.Where(s => s.User.Id == user.Id && s.Event.Id == eventId).Select( s => s.SeatNumber);
             return Json(new
             {
+                Seats = availableSeats,
                 success = true,
                 message = $"{seatsSelected.Count()} selected so far",
-                bookedSeats = string.Join(",", seatsSelected.ToArray())
+                UserSeats = string.Join(",", seatsSelected.ToArray())
             });
 
 
