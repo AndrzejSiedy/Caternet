@@ -9,19 +9,9 @@ using System.Threading.Tasks;
 
 namespace Caternet.Data
 {
-    public class DbInitializer
+    public static class DbInitializer
     {
-        private readonly UserManager<ApplicationUser> _userManager;
-        private ApplicationDbContext _context;
-
-
-        public DbInitializer(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
-        {
-            _context = context;
-            _userManager = userManager;
-        }
-
-        public async Task Seed()
+        public static async void Seed(ApplicationDbContext _context, UserManager<ApplicationUser> _userManager)
         {
             _context.Database.EnsureCreated();
 
@@ -69,7 +59,6 @@ namespace Caternet.Data
 
                 _context.Seats.AddRange(eventSeats);
                 await _context.SaveChangesAsync();
-
 
             }
 

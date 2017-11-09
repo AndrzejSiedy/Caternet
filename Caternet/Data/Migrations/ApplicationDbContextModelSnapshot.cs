@@ -98,11 +98,13 @@ namespace Caternet.Data.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd();
 
-                    b.Property<string>("AttendeeName");
+                    b.Property<string>("AttendeeName")
+                        .IsRequired();
 
                     b.Property<int>("Col");
 
-                    b.Property<string>("Email");
+                    b.Property<string>("Email")
+                        .IsRequired();
 
                     b.Property<int?>("EventId");
 
